@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart Demo - Redis Cache</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+        }
+
+        .demo-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .demo-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .demo-info ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .user-controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .user-controls input {
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .user-controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .user-controls button:hover {
+            background: #5568d3;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .products-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .products-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .product-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .product-card h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .product-price {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        .add-to-cart-btn {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .add-to-cart-btn:hover {
+            background: #5568d3;
+        }
+
+        .cart-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .cart-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .cart-items {
+            margin-bottom: 20px;
+        }
+
+        .cart-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .cart-item-details {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .quantity-display {
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .remove-btn {
+            padding: 5px 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .cart-total {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .total-line.total {
+            font-weight: bold;
+            font-size: 24px;
+            color: #667eea;
+            padding-top: 10px;
+            border-top: 2px solid #dee2e6;
+        }
+
+        .checkout-btn {
+            width: 100%;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .checkout-btn:hover {
+            background: #218838;
+        }
+
+        .cache-indicator {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cache-indicator::before {
+            content: "✓";
+            font-size: 20px;
+            color: #28a745;
+        }
+
+        .latency-display {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛒 Shopping Cart Demo</h1>
+            <p>Redis Cache Demonstration - Real-time cart management with ElastiCache</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.85;">
+                <strong>Instance ID:</strong> <span id="instance-id">Loading...</span>
+            </p>
+        </header>
+
+        <div class="demo-info">
+            <h3>How to Test Redis Caching:</h3>
+            <ul>
+                <li><strong>Add items</strong> to see Redis operations with sub-millisecond latency</li>
+                <li><strong>Open multiple browser tabs</strong> with the same cart ID to see shared Redis state</li>
+                <li><strong>Watch response times</strong> - each operation shows latency from Redis</li>
+                <li><strong>Switch user/guest</strong> to see separate cart namespaces in Redis</li>
+                <li><strong>Merge carts</strong> to demonstrate atomic Redis operations</li>
+            </ul>
+        </div>
+
+        <div class="user-controls">
+            <div>
+                <label><strong>Cart ID:</strong></label>
+                <input type="text" id="cartId" placeholder="user-123 or session-abc" value="user-demo-1">
+            </div>
+            <div>
+                <label><strong>User ID (optional):</strong></label>
+                <input type="text" id="userId" placeholder="user-123">
+            </div>
+            <button onclick="loadCart()">Load Cart</button>
+            <button onclick="clearCartDisplay()">Clear Display</button>
+        </div>
+
+        <div class="main-content">
+            <div class="products-section">
+                <h2>Products</h2>
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <div class="cart-section">
+                <h2>Your Cart</h2>
+                <div id="cacheIndicator" class="cache-indicator" style="display: none;">
+                    <span>✓ Data loaded from Redis cache</span>
+                    <span class="latency-display" id="latencyDisplay"></span>
+                </div>
+                <div id="errorMessage" class="error" style="display: none;"></div>
+                <div class="cart-items" id="cartItems">
+                    <div class="loading">Loading cart...</div>
+                </div>
+                <div class="cart-total" id="cartTotal" style="display: none;">
+                    <div class="total-line">
+                        <span>Items:</span>
+                        <span id="totalItems">0</span>
+                    </div>
+                    <div class="total-line total">
+                        <span>Total:</span>
+                        <span id="totalPrice">$0.00</span>
+                    </div>
+                    <button class="checkout-btn" onclick="checkout()">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentCartId = 'user-demo-1';
+        let currentUserId = null;
+
+        // Sample products
+        const products = [
+            { id: 'prod-1', name: 'Laptop', price: 1299.99, emoji: '💻' },
+            { id: 'prod-2', name: 'Smartphone', price: 899.99, emoji: '📱' },
+            { id: 'prod-3', name: 'Headphones', price: 199.99, emoji: '🎧' },
+            { id: 'prod-4', name: 'Keyboard', price: 129.99, emoji: '⌨️' },
+            { id: 'prod-5', name: 'Mouse', price: 49.99, emoji: '🖱️' },
+            { id: 'prod-6', name: 'Monitor', price: 349.99, emoji: '🖥️' },
+            { id: 'prod-7', name: 'Tablet', price: 499.99, emoji: '📱' },
+            { id: 'prod-8', name: 'Speaker', price: 179.99, emoji: '🔊' }
+        ];
+
+        // Load instance ID
+        async function loadInstanceId() {
+            try {
+                const response = await fetch(`${API_BASE}/metadata`);
+                const data = await response.json();
+                document.getElementById('instance-id').textContent = data.instance_id || 'Unknown';
+            } catch (error) {
+                console.error('Failed to load instance ID:', error);
+                document.getElementById('instance-id').textContent = 'Error loading';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInstanceId();
+            renderProducts();
+            loadCart();
+        });
+
+        function renderProducts() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <div class="product-image">${product.emoji}</div>
+                    <h3>${product.name}</h3>
+                    <div class="product-price">$${product.price.toFixed(2)}</div>
+                    <button class="add-to-cart-btn" onclick="addToCart('${product.id}', ${product.price})">
+                        Add to Cart
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function addToCart(productId, price) {
+            currentCartId = document.getElementById('cartId').value || currentCartId;
+            currentUserId = document.getElementById('userId').value || null;
+
+            // Ensure cart ID exists
+            if (!currentCartId || currentCartId.trim() === '') {
+                showError('Cart ID is required. Please enter a cart ID.');
+                return;
+            }
+
+            const startTime = performance.now();
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'X-Cart-ID': currentCartId.trim()
+                };
+
+                if (currentUserId) {
+                    headers['X-User-ID'] = currentUserId;
+                }
+
+                const response = await fetch(`${API_BASE}/cart/items`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: 1,
+                        price: parseFloat(price)  // Ensure price is a number
+                    })
+                });
+
+                const latency = performance.now() - startTime;
+
+                if (!response.ok) {
+                    let errorMessage = 'Failed to add item';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.detail || error.message || error.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    showError(errorMessage);
+                    return;
+                }
+
+                const result = await response.json();
+                showCacheIndicator(`Item added to cart (${result.latency_ms}ms from Redis)`);
+
+                // Reload cart
+                loadCart();
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        async function loadCart() {
+            currentCartId = document.getElementById('cartId').value || currentCartId;
+            currentUserId = document.getElementById('userId').value || null;
+
+            // Ensure cart ID exists
+            if (!currentCartId || currentCartId.trim() === '') {
+                renderEmptyCart();
+                return;
+            }
+
+            const startTime = performance.now();
+
+            try {
+                const headers = {
+                    'X-Cart-ID': currentCartId.trim()
+                };
+
+                if (currentUserId) {
+                    headers['X-User-ID'] = currentUserId;
+                }
+
+                const response = await fetch(`${API_BASE}/cart`, {
+                    headers: headers
+                });
+
+                const latency = performance.now() - startTime;
+
+                if (response.status === 404) {
+                    renderEmptyCart();
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    showError(error.detail || 'Failed to load cart');
+                    return;
+                }
+
+                const cart = await response.json();
+                showCacheIndicator(`Cart loaded from Redis cache (${cart.latency_ms}ms)`);
+                renderCart(cart);
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        function renderCart(cart) {
+            const itemsDiv = document.getElementById('cartItems');
+            const totalDiv = document.getElementById('cartTotal');
+
+            if (!cart.items || Object.keys(cart.items).length === 0) {
+                renderEmptyCart();
+                return;
+            }
+
+            const items = Object.values(cart.items);
+
+            itemsDiv.innerHTML = items.map(item => {
+                const product = products.find(p => p.id === item.product_id);
+                const productName = product ? product.name : item.product_id;
+                const itemTotal = (parseFloat(item.price_snapshot) * item.quantity).toFixed(2);
+
+                return `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${productName}</div>
+                            <div class="cart-item-details">
+                                $${parseFloat(item.price_snapshot).toFixed(2)} × ${item.quantity} = $${itemTotal}
+                            </div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <div class="quantity-control">
+                                <button class="quantity-btn" onclick="updateQuantity('${item.product_id}', ${item.quantity - 1})">-</button>
+                                <span class="quantity-display">${item.quantity}</span>
+                                <button class="quantity-btn" onclick="updateQuantity('${item.product_id}', ${item.quantity + 1})">+</button>
+                            </div>
+                            <button class="remove-btn" onclick="removeItem('${item.product_id}')">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            totalDiv.style.display = 'block';
+            document.getElementById('totalItems').textContent = cart.total_items || 0;
+            document.getElementById('totalPrice').textContent = `$${parseFloat(cart.total_price || 0).toFixed(2)}`;
+        }
+
+        function renderEmptyCart() {
+            const itemsDiv = document.getElementById('cartItems');
+            const totalDiv = document.getElementById('cartTotal');
+
+            itemsDiv.innerHTML = '<div class="empty-cart">Your cart is empty. Add some products!</div>';
+            totalDiv.style.display = 'none';
+        }
+
+        async function updateQuantity(productId, newQuantity) {
+            if (newQuantity < 0) {
+                return;
+            }
+
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'X-Cart-ID': currentCartId
+                };
+
+                if (currentUserId) {
+                    headers['X-User-ID'] = currentUserId;
+                }
+
+                const response = await fetch(`${API_BASE}/cart/items`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: newQuantity > 0 ? 1 : 0,
+                        price: product.price
+                    })
+                });
+
+                if (newQuantity === 0) {
+                    // If setting to 0, actually remove the item
+                    removeItem(productId);
+                } else {
+                    // Update by adding the difference
+                    const currentCart = await fetch(`${API_BASE}/cart`, { headers: { 'X-Cart-ID': currentCartId } }).then(r => r.json());
+                    const currentItem = currentCart.items[productId];
+                    const currentQty = currentItem ? currentItem.quantity : 0;
+                    const diff = newQuantity - currentQty;
+
+                    if (diff !== 0) {
+                        await fetch(`${API_BASE}/cart/items`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify({
+                                product_id: productId,
+                                quantity: diff > 0 ? diff : -Math.abs(diff),
+                                price: product.price
+                            })
+                        });
+                    }
+                }
+
+                loadCart();
+            } catch (error) {
+                showError('Failed to update quantity: ' + error.message);
+            }
+        }
+
+        async function removeItem(productId) {
+            try {
+                const headers = {
+                    'X-Cart-ID': currentCartId
+                };
+
+                if (currentUserId) {
+                    headers['X-User-ID'] = currentUserId;
+                }
+
+                const response = await fetch(`${API_BASE}/cart/items/${productId}`, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    showError(error.detail || 'Failed to remove item');
+                    return;
+                }
+
+                loadCart();
+            } catch (error) {
+                showError('Failed to remove item: ' + error.message);
+            }
+        }
+
+        async function checkout() {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'X-Cart-ID': currentCartId
+                };
+
+                if (currentUserId) {
+                    headers['X-User-ID'] = currentUserId;
+                }
+
+                const response = await fetch(`${API_BASE}/checkout/start`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        cart_id: currentCartId,
+                        validate_pricing: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    showError(error.detail || 'Checkout failed');
+                    return;
+                }
+
+                const result = await response.json();
+                alert(`Order placed! Order ID: ${result.order_id}\nTotal: $${parseFloat(result.total).toFixed(2)}`);
+                loadCart();
+            } catch (error) {
+                showError('Checkout failed: ' + error.message);
+            }
+        }
+
+        function showCacheIndicator(message) {
+            const indicator = document.getElementById('cacheIndicator');
+            const latencyDisplay = document.getElementById('latencyDisplay');
+            indicator.style.display = 'flex';
+            latencyDisplay.textContent = message || '';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function clearCartDisplay() {
+            renderEmptyCart();
+        }
+
+        // Auto-refresh cart every 2 seconds to show real-time updates
+        setInterval(loadCart, 2000);
+    </script>
+</body>
+</html>
